@@ -1,0 +1,13 @@
+requests
+pandas
+scikit-learn
+tldextract
+numpy
+beautifulsoup4
+lxml
+sentence-transformers
+torch
+lightgbm
+joblib
+flask
+flask-cors

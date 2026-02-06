@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        .test-link {
+            display: block;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .test-link:hover {
+            background: #e0e0e0;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .safe {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🛡️ AI Phishing Detector - Test Page</h1>
+
+    <div class="warning">
+        <strong>⚠️ Test Instructions:</strong>
+        <ol>
+            <li>Make sure the backend is running: <code>python -m src.models.app</code></li>
+            <li>Reload the extension in <code>chrome://extensions/</code></li>
+            <li>Click the test links below</li>
+            <li>Watch for the badge icon change (✓ = safe, ⚠ = phishing, ? = error)</li>
+            <li>Click the extension icon to see detailed results</li>
+        </ol>
+    </div>
+
+    <h2>Test Links:</h2>
+
+    <div class="warning">
+        <h3>🚨 Known Phishing URL (Should trigger warning):</h3>
+        <p><strong>EXODUS-WALLET-WEB3 (Fake)</strong></p>
+        <p>This is a confirmed phishing site pretending to be Exodus Wallet.</p>
+        <p><strong>Expected:</strong> Red badge with ⚠, system notification</p>
+        <a href="https://exodus-wallet-web3.created.app" class="test-link" target="_blank">
+            🔗 https://exodus-wallet-web3.created.app (PHISHING - DO NOT ENTER CREDENTIALS)
+        </a>
+    </div>
+
+    <div class="safe">
+        <h3>✅ Legitimate URL (Should be safe):</h3>
+        <p><strong>Google</strong></p>
+        <p>This is in the Tranco Top 1M whitelist.</p>
+        <p><strong>Expected:</strong> Green badge with ✓</p>
+        <a href="https://google.com" class="test-link" target="_blank">
+            🔗 https://google.com
+        </a>
+    </div>
+
+    <div class="warning">
+        <h3>⚠️ Unknown URL (Phase 1: Should be cautious):</h3>
+        <p><strong>Random Site</strong></p>
+        <p>Not in blacklist or whitelist. Phase 1 returns neutral.</p>
+        <p><strong>Expected:</strong> Green badge (neutral = safe for Phase 1)</p>
+        <a href="https://example-unknown-site-12345.com" class="test-link" target="_blank">
+            🔗 https://example-unknown-site-12345.com
+        </a>
+    </div>
+
+    <h2>📋 Debugging Tips:</h2>
+    <ul>
+        <li>Open Chrome DevTools (F12) → Console tab to see extension logs</li>
+        <li>Look for messages starting with <code>[AI Phishing]</code></li>
+        <li>Check backend terminal for API requests</li>
+        <li>If you see "?" badge, check if backend is running</li>
+    </ul>
+</body>
+
+</html>

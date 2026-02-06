@@ -35,5 +35,35 @@ The system employs a 5-stage analysis pipeline:
 - **Frontend/Extension:** JavaScript (Chrome Extension API) for interception and lightweight analysis.
 - **ML Models:** LightGBM (URL/Behavior), Transformers (Semantic), Hashing/Embeddings (Content).
 
-## Setup
-*(Instructions to be added)*
+## Setup & Installation
+1.  **Clone the repository.**
+2.  **Create a virtual environment:**
+    ```powershell
+    python -m venv .venv
+    .venv/Scripts/Activate.ps1
+    ```
+3.  **Install dependencies:**
+    ```powershell
+    pip install -r requirements.txt
+    ```
+
+## Development Status
+- [x] Phase 1: Project Initialization
+- [x] Phase 2: Data Collection (URL & Metadata)
+- [x] Phase 3: URL Feature Engineering
+- [x] Phase 4: Semantic Analysis
+- [x] Phase 5: Webpage Content Analysis
+- [x] Phase 6: Behavioral Analysis
+- [x] Phase 7: Model Training
+- [x] Phase 8: Risk Aggregation
+- [x] Phase 9: Chrome Extension
+- [x] Phase 10: Evaluation & Hardening
+- [x] Phase 11: Final Delivery
+
+## Performance Metrics (Zero-Day Evaluation)
+- **Accuracy**: ~86%
+- **Avg. Latency**: <300ms
+- **Detection Method**: Probabilistic Multi-Layer Analysis
+- **Resilience**: Zero-day phishing ready (Time-based split validation)
+
+

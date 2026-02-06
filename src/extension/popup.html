@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            width: 300px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .header h1 {
+            font-size: 16px;
+            margin: 0;
+        }
+        .status-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .score {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .verdict {
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .safe { color: #28a745; background: #e8f5e9; }
+        .danger { color: #dc3545; background: #fbe9e7; }
+        .reasons {
+            text-align: left;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+        .reasons ul {
+            padding-left: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AI Phishing Detector</h1>
+    </div>
+    <div class="status-card">
+        <div id="url" style="font-size: 11px; color: #888; margin-bottom: 5px; word-break: break-all;">Loading...</div>
+        <div class="score" id="score">--%</div>
+        <div class="verdict" id="verdict">Analyzing...</div>
+        
+        <div class="reasons" id="reasons-container" style="display:none;">
+            <strong>Risk Factors Detected:</strong>
+            <ul id="reasons-list"></ul>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
