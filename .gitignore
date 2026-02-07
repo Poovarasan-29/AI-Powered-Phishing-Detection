@@ -32,15 +32,6 @@ ENV/
 .vscode/
 .idea/
 
-# Project Data
-data/
-*.csv
-*.parquet
-*.h5
-*.pkl
-*.pth
-*.onnx
-
 # OS
 .DS_Store
 Thumbs.db

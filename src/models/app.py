@@ -49,10 +49,10 @@ def analyze():
     try:
         # 1. Check Rule Engine (Whitelist/Blacklist) - Highest Priority
         rule_result = rule_engine.check_url(url)
-        print(rule_result)
+
         # Blacklist hit
         if rule_result == -1:
-            print("Phishing -1")
+
             return jsonify({
                 'url': url,
                 'probability': 1.0,
@@ -63,7 +63,7 @@ def analyze():
             
         # Whitelist hit
         if rule_result == 1:
-            print("Safe 1")
+
             return jsonify({
                 'url': url,
                 'probability': 0.0,
@@ -74,7 +74,7 @@ def analyze():
 
         # 2. ML Model Inference
         if model is not None:
-            print("[MODEL]")
+
             # Extract features
             features_dict = feature_extractor.extract_features(url)
             if not features_dict:
@@ -90,7 +90,7 @@ def analyze():
             features_df = pd.DataFrame([input_list], columns=expected_features)
             probability = float(model.predict_proba(features_df)[0][1])
             is_phishing = probability > 0.5
-            print("probability : ",probability)
+
             
             explanations = []
             if is_phishing:
@@ -125,7 +125,7 @@ def analyze():
 
 @app.route('/health', methods=['GET'])
 def health():
-    print("HEALTH")
+
     return jsonify({
         'status': 'ok',
         'ml_loaded': model is not None,
@@ -133,8 +133,4 @@ def health():
     })
 
 if __name__ == "__main__":
-    print("HIII")
     app.run(port=5000, debug=True)
-    
-# COMMEND FOR RUN
-# .\.venv\Scripts\python.exe src/models/app.py
