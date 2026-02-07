@@ -45,11 +45,20 @@ class RuleEngine:
         if url_lower in self.blacklist:
             return -1
             
-        # 2. Whitelist Check (Tranco) - DISABLED as per user request
-        # extracted = tldextract.extract(url)
-        # domain = f"{extracted.domain}.{extracted.suffix}".lower()
-        # if domain in self.whitelist:
-        #     return 1
+        # 2. Whitelist Check (Tranco)
+        extracted = tldextract.extract(url)
+        domain = f"{extracted.domain}.{extracted.suffix}".lower()
+        
+        # Shared Providers List: These are safe root domains but host user content.
+        # We MUST run ML for these to check the specific subdomain/path.
+        shared_providers = {
+            'weebly.com', 'blogspot.com', 'github.io', 'firebaseapp.com',
+            'pages.dev', 'workers.dev', 'wixsite.com', 'ukit.me', 
+            'boxmode.io', '000webhostapp.com', 'web.app'
+        }
+
+        if domain in self.whitelist and domain not in shared_providers:
+            return 1
             
         return 0
 
