@@ -1,0 +1,30 @@
+URL: https://intercontrol.online/
+------------------------------
+url_length: 28
+domain_length: 19
+path_length: 1
+num_dots: 1
+num_hyphens: 0
+num_at_symbols: 0
+num_digits: 0
+digit_ratio: 0.0
+num_special_chars: 5
+num_uppercase_chars: 0
+subdomain_count: 0
+path_depth: 0
+has_ip_address: 0
+uses_url_shortener: 0
+has_double_slash: 0
+has_suspicious_prefix_suffix: 0
+uses_https: 1
+has_ssl_token: 0
+has_port_number: 0
+url_entropy: 3.610577243331642
+has_encoded_chars: 0
+has_sensitive_keywords: 0
+brand_keyword_count: 0
+brand_domain_mismatch: 0
+typosquatting_match: 0
+------------------------------
+ML Probability: 0.9965
+Is Phishing: True

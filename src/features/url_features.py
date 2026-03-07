@@ -14,14 +14,46 @@ class URLFeatureExtractor:
                           r'q\.gs|is\.gd|po\.st|bc\.vc|twitthis\.com|u\.to|j\.mp|buzurl\.com|cutt\.us|u\.bb|yourls\.org|' \
                           r'x\.co|prettylinkpro\.com|scrnch\.me|filoops\.info|vzturl\.com|qr\.net|1url\.com|tweez\.me|v\.gd|tr\.im|link\.zip\.net'
         
-        self.sensitive_keywords = ['login', 'verify', 'update', 'secure', 'account', 'banking', 'confirm', 'signin', 'ebayisapi', 'webscr']
-        self.brands = ['google', 'amazon', 'microsoft', 'apple', 'facebook', 'netflix', 'paypal', 'github', 'instagram', 'twitter', 'linkedin']
+        self.sensitive_keywords = ['login', 'verify', 'update', 'secure', 'account', 'banking', 'confirm', 'signin', 'ebayisapi', 'webscr', 'wallet', 'password', 'validation']
+        
+
+        # List of restricted/high-trust financial TLDs
+        self.financial_tlds = ['bank', 'insurance', 'bank.in', 'creditcard', 'trust']
+        
+        # Expanded list of top phishing targets
+        self.brands = [
+            'google', 'amazon', 'microsoft', 'apple', 'facebook', 'netflix', 'paypal', 'github', 
+            'instagram', 'twitter', 'linkedin', 'whatsapp', 'dropbox', 'yahoo', 'adobe', 
+            'chase', 'wellsfargo', 'citi', 'bankofamerica', 'hsbc', 'barclays', 'coinbase', 
+            'blockchain', 'binance', 'roblox', 'steam', 'spotify', 'tiktok', 'indianbank', 'sbi', 'hdfcbank', 'icicibank'
+        ]
+
 
     def calculate_entropy(self, text):
         if not text:
             return 0
         probabilities = [float(text.count(c)) / len(text) for c in set(text)]
         return -sum(p * math.log(p, 2) for p in probabilities)
+
+    def levenshtein_distance(self, s1, s2):
+        """Calculates the Levenshtein distance between two strings."""
+        if len(s1) < len(s2):
+            return self.levenshtein_distance(s2, s1)
+
+        if len(s2) == 0:
+            return len(s1)
+
+        previous_row = range(len(s2) + 1)
+        for i, c1 in enumerate(s1):
+            current_row = [i + 1]
+            for j, c2 in enumerate(s2):
+                insertions = previous_row[j + 1] + 1
+                deletions = current_row[j] + 1
+                substitutions = previous_row[j] + (c1 != c2)
+                current_row.append(min(insertions, deletions, substitutions))
+            previous_row = current_row
+        
+        return previous_row[-1]
 
     def extract_features(self, url):
         features = {}
@@ -90,13 +122,40 @@ class URLFeatureExtractor:
                 break
         features['brand_domain_mismatch'] = mismatch
 
-        # 5. Typo/Homoglyph (Simulated basic check)
-        # In a real scenario, we'd use Levenshtein distance against top brands
-        features['has_homoglyph'] = 1 if re.search(r'[01lI|]', extracted.domain) and any(b in extracted.domain for b in ['google', 'paypal', 'microsoft']) else 0
+        # 5. Typo/Homoglyph (Advanced Typosquatting)
+        # Check if the domain is suspiciously similar to a target brand (e.g. g00gle, paypol)
+        typosquat_found = 0
+        min_distance = float('inf')
+        
+        clean_domain = extracted.domain.lower()
+        
+        for brand in self.brands:
+            # Skip if exact match (that's likely legitimate or handled by whitelist)
+            if clean_domain == brand:
+                continue
+                
+            dist = self.levenshtein_distance(clean_domain, brand)
+            
+            # Identify typosquatting:
+            # If distance is small (1 or 2) and brand is reasonably long, it's a likely typosquat
+            # e.g. google (6) -> g00gle (dist 2) -> Ratio
+            
+            if dist > 0 and dist <= 2 and len(brand) > 4:
+                typosquat_found = 1
+                break
+                
+        features['typosquatting_match'] = typosquat_found
 
         return features
 
 if __name__ == "__main__":
     extractor = URLFeatureExtractor()
-    test_url = "http://secure-google-login.com/verify?id=123"
-    print(extractor.extract_features(test_url))
+    test_urls = [
+        "http://secure-google-login.com/verify?id=123",
+        "https://www.g00gle.com",  # Typosquat
+        "https://paypal-update.com"
+    ]
+    for u in test_urls:
+        print(f"URL: {u}")
+        fs = extractor.extract_features(u)
+        print(f"  Typosquat: {fs.get('typosquatting_match')}, Mismatch: {fs.get('brand_domain_mismatch')}")

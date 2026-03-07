@@ -3,11 +3,13 @@ import numpy as np
 import lightgbm as lgb
 import joblib
 import os
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, 
     f1_score, roc_auc_score, classification_report
 )
+from src.features.url_features import URLFeatureExtractor
+import tldextract
 
 class PhishingModelPipeline:
     """
@@ -20,13 +22,14 @@ class PhishingModelPipeline:
         self.model_dir = model_dir
         self.model = None
         self.feature_names = []
+        self.extractor = URLFeatureExtractor()
         
         # Ensure model directory exists
         os.makedirs(self.model_dir, exist_ok=True)
 
     def load_and_preprocess(self):
         """
-        Loads the dataset, selects numeric features, and handles missing values.
+        Loads the dataset, injects new features (Typosquatting), and prepares X, y.
         """
         print(f"[*] Loading dataset from: {self.data_path}")
         if not os.path.exists(self.data_path):
@@ -34,11 +37,39 @@ class PhishingModelPipeline:
 
         df = pd.read_csv(self.data_path).dropna(how='all')
         
-        print(f"[*] Dataset loaded with {len(df)} samples and {len(df.columns)} columns.")
+        print(f"[*] Dataset loaded with {len(df)} samples.")
 
-        # Inputs: url (ID), label (Target). Features: everything else.
+        # Inputs: url (ID), label (Target).
         if 'url' not in df.columns or 'label' not in df.columns:
             raise ValueError("Dataset must contain 'url' and 'label' columns.")
+
+        # --- Inject New Feature: Typosquatting Match ---
+        # Since we just added this feature to the extractor, the CSV likely doesn't have it.
+        # We calculate it on the fly to ensure the model uses our latest improvements.
+        if 'typosquatting_match' not in df.columns:
+            print("[*] Generating new 'typosquatting_match' feature for all URLs... (This may take a moment)")
+            # Create a helper to apply extraction
+            def get_typo_score(url):
+                try:
+                    # We only need extraction for the domain logic, but let's reuse the extractor carefully
+                    # To be efficient, we replicate just the needed part or call existing method
+                    # But calling extract_features is heavy. Let's do a direct check.
+                    extracted = tldextract.extract(url)
+                    clean_domain = extracted.domain.lower()
+                    
+                    found = 0
+                    for brand in self.extractor.brands:
+                         if clean_domain == brand: continue
+                         dist = self.extractor.levenshtein_distance(clean_domain, brand)
+                         if dist > 0 and dist <= 2 and len(brand) > 4:
+                             found = 1
+                             break
+                    return found
+                except:
+                    return 0
+
+            df['typosquatting_match'] = df['url'].apply(get_typo_score)
+            print("[*] Feature generation complete.")
 
         # Target variable
         y = df['label']
@@ -47,8 +78,7 @@ class PhishingModelPipeline:
         X = df.drop(['url', 'label'], axis=1)
         X = X.select_dtypes(include=[np.number])
         
-        # Handle missing values: Using 0 as a neutral baseline for Stage 1 features
-        # (e.g., if path_depth is missing, assume 0)
+        # Handle missing values
         X = X.fillna(0)
         
         self.feature_names = X.columns.tolist()
@@ -57,11 +87,9 @@ class PhishingModelPipeline:
 
     def train_model(self, X, y):
         """
-        Splits data, tunes/trains LightGBM, and evaluates performance.
+        Splits data, performs Hyperparameter Optimization (RandomizedSearch), and trains the best model.
         """
         # 1. Stratified Train-Test Split
-        # Ensuring class distribution is preserved is critical for detection models
-        # Handle cases where dataset is extremely small (like the current temp/dataset.csv)
         test_size = 0.2
         if len(y) < 10:
             print("[!] Warning: Dataset too small for standard split. Using all data for training.")
@@ -71,32 +99,43 @@ class PhishingModelPipeline:
                 X, y, test_size=test_size, stratify=y, random_state=42
             )
 
-        # 2. Hyperparameter Configuration
-        # These parameters are chosen to prevent overfitting while maintaining speed
-        lgbm_params = {
-            'objective': 'binary',
-            'metric': 'binary_logloss',
-            'boosting_type': 'gbdt',
-            'n_estimators': 100,
-            'learning_rate': 0.05,
-            'num_leaves': 31,
-            'max_depth': -1,
-            'feature_fraction': 0.8, # Prevent reliance on single features
-            'bagging_fraction': 0.8,
-            'bagging_freq': 5,
-            'is_unbalance': True,    # Handle imbalance between Phishing and Safe URLs
-            'random_state': 42,
-            'verbose': -1
+        print("[*] Starting Hyperparameter Optimization (RandomizedSearchCV)...")
+        
+        # 2. Define Parameter Grid
+        param_grid = {
+            'n_estimators': [100, 200, 500],
+            'learning_rate': [0.01, 0.05, 0.1],
+            'num_leaves': [31, 50, 100],
+            'max_depth': [-1, 10, 20],
+            'feature_fraction': [0.8, 0.9, 1.0],
+            'bagging_fraction': [0.8, 0.9, 1.0],
+            'bagging_freq': [5, 10],
+            'is_unbalance': [True, False]
         }
+        
+        lgbm = lgb.LGBMClassifier(objective='binary', metric='binary_logloss', verbose=-1, random_state=42)
+        
+        # 3. Randomized Search
+        search = RandomizedSearchCV(
+            estimator=lgbm,
+            param_distributions=param_grid,
+            n_iter=20, # Try 20 combinations
+            scoring='recall', # Optimize for Recall (Catching Phishing is priority)
+            cv=3,
+            verbose=1,
+            random_state=42,
+            n_jobs=-1
+        )
+        
+        search.fit(X_train, y_train)
+        
+        print(f"[SUCCESS] Best Parameters found: {search.best_params_}")
+        self.model = search.best_estimator_
 
-        print("[*] Training LightGBM model with stratified data...")
-        self.model = lgb.LGBMClassifier(**lgbm_params)
-        self.model.fit(X_train, y_train)
-
-        # 3. Comprehensive Evaluation
+        # 4. Comprehensive Evaluation
         self._evaluate(X_train, y_train, X_test, y_test)
         
-        # 4. Feature Importance
+        # 5. Feature Importance
         self._report_importance()
 
     def _evaluate(self, X_train, y_train, X_test, y_test):
@@ -126,22 +165,15 @@ class PhishingModelPipeline:
             te_score = func(y_test, test_preds)
             print(f"{name:<20} | {tr_score:<10.4f} | {te_score:<10.4f}")
 
-        # ROC-AUC is vital for checking the model's ability to rank risk
         try:
             auc = roc_auc_score(y_test, test_probs)
             print(f"{'ROC-AUC':<20} | {'-':<10} | {auc:<10.4f}")
         except:
-            print("[!] ROC-AUC could not be calculated (usually due to single class in split)")
+            print("[!] ROC-AUC could not be calculated.")
 
         print("-" * 50)
         print("DETAILED TEST REPORT:")
         print(classification_report(y_test, test_preds, target_names=['Safe', 'Phishing']))
-        
-        print("\n[CRITICAL ANALYSIS: RECALL]")
-        print("In Phishing Detection, Recall for the Phishing class is our most critical metric.")
-        print("A False Negative (missing a phishing site) results in a compromised user.")
-        print("A False Positive (flagging a safe site) is merely an inconvenience.")
-        print("Our pipeline prioritizes identifying as many threats as possible.\n")
 
     def _report_importance(self):
         """

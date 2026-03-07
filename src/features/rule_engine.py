@@ -10,8 +10,10 @@ class RuleEngine:
     
     def __init__(self):
         self.external_dir = "data/external"
+
         self.phishtank_path = os.path.join(self.external_dir, "phishtank.csv")
         self.tranco_path = os.path.join(self.external_dir, "tranco_whitelist.csv")
+        self.custom_whitelist_path = os.path.join(self.external_dir, "custom_whitelist.csv")
 
         
         self.blacklist = set()
@@ -21,15 +23,31 @@ class RuleEngine:
     def _load_datasets(self):
         # Load PhishTank blacklist
         if os.path.exists(self.phishtank_path):
-            df = pd.read_csv(self.phishtank_path)
-            self.blacklist = set(df['url'].str.lower())
-            print(f"[*] Loaded {len(self.blacklist)} phishing URLs from PhishTank.")
+            try:
+                df = pd.read_csv(self.phishtank_path)
+                self.blacklist = set(df['url'].str.lower())
+                print(f"[*] Loaded {len(self.blacklist)} phishing URLs from PhishTank.")
+            except Exception as e:
+                print(f"[!] Error loading PhishTank: {e}")
 
         
         # Load Tranco whitelist
         if os.path.exists(self.tranco_path):
-            df = pd.read_csv(self.tranco_path)
-            self.whitelist = set(df['domain'].str.lower())
+            try:
+                df = pd.read_csv(self.tranco_path)
+                self.whitelist.update(set(df['domain'].str.lower()))
+            except Exception as e:
+                print(f"[!] Error loading Tranco whitelist: {e}")
+
+        # Load Custom Whitelist
+        if os.path.exists(self.custom_whitelist_path):
+            try:
+                df = pd.read_csv(self.custom_whitelist_path)
+                self.whitelist.update(set(df['domain'].str.lower()))
+                print(f"[*] Loaded {len(df)} custom whitelisted domains.")
+            except Exception as e:
+                print(f"[!] Error loading custom whitelist: {e}")
+
 
     def check_url(self, url):
         """
@@ -51,10 +69,14 @@ class RuleEngine:
         
         # Shared Providers List: These are safe root domains but host user content.
         # We MUST run ML for these to check the specific subdomain/path.
+        # Commonly used for free hosting of phishing pages.
         shared_providers = {
-            'weebly.com', 'blogspot.com', 'github.io', 'firebaseapp.com',
-            'pages.dev', 'workers.dev', 'wixsite.com', 'ukit.me', 
-            'boxmode.io', '000webhostapp.com', 'web.app'
+            'weebly.com', 'blogspot.com', 'github.io', 'firebaseapp.com', 'web.app',
+            'pages.dev', 'workers.dev', 'wixsite.com', 'ukit.me', 'boxmode.io', 
+            '000webhostapp.com', 'netlify.app', 'vercel.app', 'herokuapp.com', 
+            'ghost.io', 'gitlab.io', 'render.com', 'onrender.com', 'surge.sh',
+            'railway.app', 'fly.dev', 'glitch.me', 'repl.co', 'pythonanywhere.com',
+            'azurewebsites.net', 'amazonaws.com', 'wordpress.com', 'tumblr.com'
         }
 
         if domain in self.whitelist and domain not in shared_providers:
